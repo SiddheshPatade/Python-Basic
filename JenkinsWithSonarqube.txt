@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "compare-app"
+        SONAR_PROJECT_KEY = "compare-app"
+        SONAR_SERVER = "SonarQube"  // This must match the name configured in Jenkins
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git 'https://github.com/your-repo/your-project.git'  // Replace with your repo URL
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv(SONAR_SERVER) {
+                    sh "sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.sources=. -Dsonar.host.url=http://your-sonarqube-server:9000"
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh "docker build -t ${IMAGE_NAME} ."
+                }
+            }
+        }
+
+        stage('Run Comparison') {
+            steps {
+                script {
+                    sh "docker run --rm ${IMAGE_NAME} 10 20"
+                }
+            }
+        }
+
+        stage('Clean Up') {
+            steps {
+                script {
+                    sh "docker rmi ${IMAGE_NAME} -f"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline executed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Please check logs."
+        }
+    }
+}
